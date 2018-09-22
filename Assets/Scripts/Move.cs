@@ -12,7 +12,7 @@ public class Move : MonoBehaviour {
     public GameObject Camera;
     Vector3 CameraLookAt;
     Vector3 CameraRight;
-    public float LoseFactor = 8f;
+    public Vector3 Displacement;
 
     void Awake () {
         direction = Vector3.zero;
@@ -22,6 +22,7 @@ public class Move : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+        Displacement = transform.position;
         transform.Rotate(-90, 0, 0);
         CameraLookAt = Camera.transform.forward.normalized;
         CameraRight = Camera.transform.right.normalized;
@@ -29,34 +30,24 @@ public class Move : MonoBehaviour {
         CameraLookAt = Vector3.ProjectOnPlane(CameraLookAt, new Vector3(0, 1, 0));
         CameraRight = Vector3.ProjectOnPlane(CameraRight, new Vector3(0, 1, 0));
 
+        
         if (Input.GetKey("w"))
         {
-            direction += CameraLookAt*aceleration;
-        } else 
-        {
-            direction -= CameraLookAt * aceleration*LoseFactor;
+            direction += CameraLookAt;
         }
         if (Input.GetKey("s"))
         {
-            direction -= CameraLookAt*aceleration;
-        } else
-        {
-            direction += CameraLookAt * aceleration*LoseFactor;
+            direction += -CameraLookAt;
         }
         if (Input.GetKey("d"))
         {
-            direction += CameraRight * aceleration;
-        } else
-        {
-            direction -= CameraRight * aceleration*LoseFactor;
+            direction += CameraRight;
         }
         if (Input.GetKey("a"))
         {
-            direction -= CameraRight * aceleration;
-        } else
-        {
-            direction += CameraRight * aceleration*LoseFactor;
+            direction += -CameraRight;
         }
+
         if (!Input.anyKey)
         {
             direction -= direction*aceleration*5;
@@ -74,6 +65,6 @@ public class Move : MonoBehaviour {
             transform.forward = direction.normalized;
 
         transform.position += direction;
-        //print(direction);
+        Displacement = transform.position - Displacement;
     }
 }

@@ -16,6 +16,8 @@ public class PlayerCameraScript : MonoBehaviour {
     private float pc_realDistance;              //Variable que guardará el el módulo de la distancia inicial
     public float pc_MaxAngle = 90f;             //Variable que indica el ángulo límite a partir del cual la cámara no gira
 
+    //public LayerMask StaticSolidLayer = -1;
+
     //FUNCIONES PRINCIPALES
     void Awake()
     {
@@ -26,6 +28,7 @@ public class PlayerCameraScript : MonoBehaviour {
 
 	void LateUpdate () {
         UpdateCameraPos(pc_ObjFollowed);            //Actualizo la posición de la cámara
+        CheckObstacles(pc_ObjFollowed);
         pc_mainObject.transform.Rotate(90, 0, 0);   //Esto solo sirve para ayuda en el desarrollo, se puede quitar más adelante
     }
 
@@ -83,5 +86,18 @@ public class PlayerCameraScript : MonoBehaviour {
             transform.position = new Vector3(transform.position.x, pc_CameraHeight, transform.position.z);  //Asigno una constante altura
         }
     }
+    void CheckObstacles(Transform Obj)      //Este método comprueba si hay algún obstáculo entre la cámara y el objetivo, y además la recoloca.
+    {
+        RaycastHit hit;
+        int layer_mask = LayerMask.GetMask(StaticVariables.pc_StaticSolidLayer);
 
+        if(Physics.Raycast(Obj.position,-transform.TransformDirection(Vector3.forward),out hit, (Obj.position - transform.position).magnitude,layer_mask))
+        {
+            print(hit.distance + " " + hit.collider.gameObject.name);
+        }
+        /*
+         * Un problema de esto es que no detecta la colisión con un objeto si la cámara está dentro del mismo
+         * Por lo cual, tiene más sentido hacer el raycast del objeto a la cámara
+         */
+    }
 }

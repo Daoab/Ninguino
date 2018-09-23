@@ -4,34 +4,52 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour {
 
-    [SerializeField] float MJ_movementSpeed = 10f;
-    [SerializeField] Transform MJ_playerCamera;
+    [SerializeField][Tooltip("Velocidad de movimiento del personaje")] float movementSpeed = 10f;// Velocidad de movimiento del personaje
+    [SerializeField][Tooltip("Enlace a la camara del jugador")] Transform playerCamera;          // Enlace a la camara que seguirá al jugador para basar el movimiento en sus ejes
 
-    float MJ_xThrow;
-    float MJ_yThrow;
 
-    Vector3 MJ_cameraForward;
-    Vector3 MJ_cameraRight;
+    Rigidbody rb;
 
-    [HideInInspector] public Vector3 displacement;
-	
-	// Update is called once per frame
-	void Update () {
-        displacement = transform.position;
-        MJ_xThrow = Input.GetAxis("Horizontal");
-        MJ_yThrow = Input.GetAxis("Vertical");
+    float xThrow;                                                                                //Cantidad que mueves el stick en su eje x
+    float yThrow;                                                                                //Cantidad que mueves el stick en su eje y
 
-        MJ_cameraForward = MJ_playerCamera.forward;
-        MJ_cameraRight = MJ_playerCamera.right;
+    Vector3 cameraForward;                                                                       //Aqui guardamos el vector forward (z) de la camara del jugador
+    Vector3 cameraRight;                                                                         // Aqui guardamos el vector right (x) de la camara del jugador
 
-        MJ_cameraForward.y = 0f;
-        MJ_cameraRight.y = 0f;
+    [HideInInspector] public Vector3 displacement;                                               //Se usa en el modo de camara automatica para el correcto seguimiento a la hora de correr hacia la camara
 
-        MJ_cameraRight = MJ_cameraRight.normalized;
-        MJ_cameraForward = MJ_cameraForward.normalized;
+    private void Start()
+    {
+        rb = gameObject.GetComponent<Rigidbody>();                                               // Guardamos el componente rigidbody del jugador
+    }
 
-        transform.position += (MJ_cameraRight * MJ_xThrow + MJ_cameraForward * MJ_yThrow) * MJ_movementSpeed * Time.deltaTime;
-        displacement = transform.position - displacement;
-        transform.LookAt(transform.position + displacement);
+    // Update is called once per frame
+    void Update () {
+        rb.velocity = Vector3.zero;                                                              //Eliminamos la velocidad que le quede al jugador cuando deje de dar input (evita movimiento resbaladizo)
+
+        displacement = transform.position;                                                       // Guardamos posicion de este frame
+
+        xThrow = Input.GetAxis("Horizontal");                                                    //Asignamos el valor del eje x a su variable
+        yThrow = Input.GetAxis("Vertical");                                                      //Asignamos el valor del eje y a su variable
+
+        cameraForward = playerCamera.forward;                                                    //Guardamos el vector forward de la camara
+        cameraRight = playerCamera.right;                                                        //Guardamos el vector right de la camara
+
+        cameraForward.y = 0f;                                                                    //Negamos la componente en y para que el jugador solo pueda andar en el plano xz
+        cameraRight.y = 0f;                                                                      //Negamos la componente en y para que el jugador solo pueda andar en el plano xz
+
+        cameraRight = cameraRight.normalized;                                                    //Normalizamos para actualizar su modulo a 1
+        cameraForward = cameraForward.normalized;                                                //Normalizamos para actualizar su modulo a 1
+
+        Vector3 movement = (cameraRight * xThrow + cameraForward * yThrow) * movementSpeed;      //Multiplicamos los vectores por el throw para ver la direccion de movimiento y por movementSpeed para ver su intensidad
+
+        rb.AddForce(movement, ForceMode.VelocityChange);                                         //Aplicamos el vector movement al RigidBody en modo VelocityChange(ingnora su masa y es menos resbaladizo)
+
+        //Antigua forma de moverse no basada en fisicas
+        //transform.position += (cameraRight * xThrow + cameraForward * yThrow) * movementSpeed * Time.deltaTime; //Actualiazmos la posicion del jugador segun los valores de los vectores de la camara y la velocidad
+
+
+        displacement = transform.position - displacement;                                        //Calculamos el desplazamiento del jugador entre frames
+        transform.LookAt(transform.position + displacement);                                     //Hacemos que el jugador mire siempre a la dirección en la que avanza
 	}
 }

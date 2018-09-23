@@ -4,149 +4,154 @@ using UnityEngine;
 
 public class PlayerCameraScript : MonoBehaviour {
 
-    //DECLARACIÓN DE VARIABLES
-    [SerializeField] Transform target;    //Variable que apunta al objeto a seguir
-    PlayerMovement playerMovementScript;
+    [Header("General")]
 
+    [SerializeField] Transform target;                                                                      //Variable que apunta al objeto a seguir
+    PlayerMovement playerMovementScript;                                                                    //Enlace al script de movimiento del jugador para poder acceder al desplazamiento
+    [SerializeField] [Tooltip("Indica cuanto se acerca la camara al jugador al hacer colision de raycast en %")] float cameraScaleFactor = 90f;
+    float originalCameraTargetPosition;                                                                     //Guardamos el valor original de la distancia jugador-camara en el caso de input para recolocarla al calcular la colision del raycast
+    bool cameraMode = false;                                                                                //Determina si usamos modo de camara automatica o con input manual
+
+    [Header("Variables para camara automatica")]
+
+    Matrix4x4 baseChangeMatrix = new Matrix4x4();                                                           //Variable que guarda la matriz de cambio de base
+    [SerializeField] float distanceFromObject = 5f;                                                         //Variable que indica la distancia inicial en el eje z
+    public float cameraHeight = 2f;                                                                         //Variable que almacena la posición constante de la cámara en el eje y
+    private float distanceMagnitude;                                                                        //Variable que guardará el el módulo de la distancia inicial
+    public float maxRotationAngle = 90f;                                                                    //Variable que indica el ángulo límite a partir del cual la cámara no gira
     
+    [Header("Variables para camara de input manual")]
 
-    Matrix4x4 pc_B = new Matrix4x4();   //Variable que guarda la matriz de cambio de base
+    [SerializeField][Tooltip("Distancia entre camara y jugador \nNota: cada vez que se modifique su valor se debe reiniciar el juego")] float targetDistanceInputCamera = 10f;
 
-    [SerializeField] float pc_distanceFromObjectInZ = 5f; //Variable que indica la distancia inicial en el eje z
-    public float pc_CameraHeight = 2f;          //Variable que almacena la posición constante de la cámara en el eje y
-    private float pc_realDistance;              //Variable que guardará el el módulo de la distancia inicial
-    public float pc_MaxAngle = 90f;             //Variable que indica el ángulo límite a partir del cual la cámara no gira
+    [SerializeField] [Tooltip("Sensibilidad en x")]float sensitivityX = 1f;                                 //Determina la sensibilidad de la camara de input manual en el eje x
+    [SerializeField] [Tooltip("Sensibilidad en y")]float sensitivityY = 1f;                                 //Determina la sensibilidad de la camara de input manual en el eje y
 
-    [SerializeField] bool pc_CameraMode = false;
-    [SerializeField] float cameraScaleFactor = 50f;
-
+    [SerializeField] [Tooltip("Angulo máxmimo que gira la camara en y")]float minYAngle = 0f;               //Determina el minimo angulo que la camara de input manual podra rotar
+    [SerializeField] [Tooltip("Angulo mínimo que gira la camara en x")]float maxYAngle = 80f;               //Determina el maximo angulo que la camara de input manual podra rotar
 
 
-    //VARIABLES CAMERA INPUT
-
-    [SerializeField] float MJ_targetDistance = 10f;
-
-    [SerializeField] float MJ_sensitivityX = 1f;
-    [SerializeField] float MJ_sensitivityY = 1f;
-
-    [SerializeField] float MJ_yMin = 0f;
-    [SerializeField] float MJ_yMax = 80f;
-
-
-    float MJ_inputX;
-    float MJ_inputY;
+    float xInput;                                                                                           //Guarda el input del eje x del stick para la camara de input manual
+    float yInput;                                                                                           //Guarda el input del eje x del stick para la camara de input manual
 
     //FUNCIONES PRINCIPALES
     void Awake()
     {
-        pc_realDistance = new Vector3(0, pc_CameraHeight, pc_distanceFromObjectInZ).magnitude;  //Calculo el módulo del vector de distancia máxima
-        playerMovementScript = target.GetComponent<PlayerMovement>();
-        cameraScaleFactor /= 100f;
+        originalCameraTargetPosition = targetDistanceInputCamera;                                           //Guardamos la distancia original entre jugador y camara en el caso de input manual
+        distanceMagnitude = new Vector3(0, cameraHeight, distanceFromObject).magnitude;                     //Calculo el módulo del vector de distancia máxima
+        playerMovementScript = target.GetComponent<PlayerMovement>();                                       //Enlazamos con el script del personaje
+        cameraScaleFactor /= 100f;                                                                          //Dividimos entre 100 el factor de escala, el codigo opera de 0 a 1 y en el inspector se muestra %
     }
     void Update()
     {
-        MJ_inputX += Input.GetAxis("Mouse X") * MJ_sensitivityX;
-        MJ_inputY += Input.GetAxis("Mouse Y") * MJ_sensitivityY;
+        xInput += Input.GetAxis("Mouse X") * sensitivityX;                                                  //Cogemos input en el eje x para la camara con input
+        yInput += Input.GetAxis("Mouse Y") * sensitivityY;                                                  //Cogemos input en el eje x para la camara con input
 
-        MJ_inputY = Mathf.Clamp(MJ_inputY, MJ_yMin, MJ_yMax);
+        yInput = Mathf.Clamp(yInput, minYAngle, maxYAngle);                                                 //Limitamos el valor del input en y para que la camara no pueda girar completamente alrededor del jugador como hace en el eje x
     }
 
     void LateUpdate () {
-        CheckCameraModeAndUpdate();            //Actualizo la posición de la cámara
+        CheckCameraModeAndUpdate();                                                                         //Actualizo la posición de la cámara
     }
 
     //FUNCIONES AUXILIARES
-    void Base(Transform newBase)            //Método que calcula la matriz de cambio de base para pasar la cámara a coordenadas del objeto a seguir
+    void Base(Transform newBase)                                                                            //Método que calcula la matriz de cambio de base para pasar la cámara a coordenadas del objeto a seguir
     {
-        int pc_MatrixSize = 4;  //Defino el tamaño de la matriz, su única utilidad es poner límite a los bucles for
-        Vector4[] pc_Columnes = new Vector4[pc_MatrixSize]; //Defino un array de Vector4 que guardará las columnas de la matriz de cambio de base
+        int matrixSize = 4;                                                                                 //Defino el tamaño de la matriz, su única utilidad es poner límite a los bucles for
+        Vector4[] columnes = new Vector4[matrixSize];                                                       //Defino un array de Vector4 que guardará las columnas de la matriz de cambio de base
         
         //Doy valor a las columnas según la fórmula para calcular la matriz de cambio de base
-        pc_Columnes[0] = new Vector4(newBase.right.x, newBase.right.y, newBase.right.z, 0.0f);
-        pc_Columnes[1] = new Vector4(newBase.up.x, newBase.up.y, newBase.up.z, 0.0f);
-        pc_Columnes[2] = new Vector4(newBase.forward.x, newBase.forward.y, newBase.forward.z, 0.0f);
-        pc_Columnes[3] = new Vector4(newBase.position.x, newBase.position.y, newBase.position.z, 1.0f);
+        columnes[0] = new Vector4(newBase.right.x, newBase.right.y, newBase.right.z, 0.0f);
+        columnes[1] = new Vector4(newBase.up.x, newBase.up.y, newBase.up.z, 0.0f);
+        columnes[2] = new Vector4(newBase.forward.x, newBase.forward.y, newBase.forward.z, 0.0f);
+        columnes[3] = new Vector4(newBase.position.x, newBase.position.y, newBase.position.z, 1.0f);
 
-        for (int i = 0; i<pc_MatrixSize; i++) //En este bucle seteo cada columna de la matriz a su columna correspondiente del array
-            pc_B.SetColumn(i, pc_Columnes[i]);
+        for (int i = 0; i<matrixSize; i++)                                                                  //En este bucle seteo cada columna de la matriz a su columna correspondiente del array
+            baseChangeMatrix.SetColumn(i, columnes[i]);
 
     }
-    void ChangeBase (string pc_direction)   //Método que cambia de base, tiene dos modos
+    void ChangeBase (string direction)                                                                      //Método que cambia de base, tiene dos modos
     {
-        if (pc_direction.Equals("toWorld"))         //en este modo devolvemos a la cámara a coordenadas del mundo
-            transform.position = pc_B.MultiplyPoint(transform.position);
-        else if (pc_direction.Equals("toObject"))   //en este modo llevamos a la cámara a coordenadas del objeto
-            transform.position = pc_B.inverse.MultiplyPoint(transform.position);
+        if (direction.Equals("toWorld"))                                                                    //en este modo devolvemos a la cámara a coordenadas del mundo
+            transform.position = baseChangeMatrix.MultiplyPoint(transform.position);
+        else if (direction.Equals("toObject"))                                                              //en este modo llevamos a la cámara a coordenadas del objeto
+            transform.position = baseChangeMatrix.inverse.MultiplyPoint(transform.position);
     }
-    void AutoUpdateCamera(Transform Obj)     //Este método actualiza la posición de mi cámara respecto del objeto a seguir cuando la cámara no es libre
+    void UpdateAutomaticCamera(Transform Obj)                                                               //Este método actualiza la posición de mi cámara respecto del objeto a seguir cuando la cámara no es libre
     {
         //Base Change
-        Base(target);   //Calculo la matriz de cambio de base
-        ChangeBase("toObject"); //Paso a coordenadas del objeto a seguir
+        Base(target);                                                                                       //Calculo la matriz de cambio de base
+        ChangeBase("toObject");                                                                             //Paso a coordenadas del objeto a seguir
         //Local vars
-        Vector3 pc_NewPos = Vector3.zero;   //Creo un vector que almacenará la nueva posición en coordenadas del objeto
-        Vector3 pc_ObjVector = Vector3.ProjectOnPlane(Obj.forward, new Vector3(0, 1, 0)).normalized;         //Variable que guarda la proyección normalizada del vector forward(z) del objeto
-        Vector3 pc_CameraVector = Vector3.ProjectOnPlane(transform.forward, new Vector3(0, 1, 0)).normalized;//Variable que guarda la proyección normalizada del vector forward(z) de la cámara
-        float pc_Angle = Vector3.Angle(pc_CameraVector, pc_ObjVector);  //Variable que guarda el ángulo que forman los dos vectores anteriores
+        Vector3 newPosition = Vector3.zero;                                                                 //Creo un vector que almacenará la nueva posición en coordenadas del objeto
+        Vector3 targetVector = Vector3.ProjectOnPlane(Obj.forward, new Vector3(0, 1, 0)).normalized;        //Variable que guarda la proyección normalizada del vector forward(z) del objeto
+        Vector3 cameraVector = Vector3.ProjectOnPlane(transform.forward, new Vector3(0, 1, 0)).normalized;  //Variable que guarda la proyección normalizada del vector forward(z) de la cámara
+        float targetCameraAngle = Vector3.Angle(cameraVector, targetVector);                                //Variable que guarda el ángulo que forman los dos vectores anteriores
         //Actions
-        if (pc_Angle < pc_MaxAngle) //Si mi ángulo no supera el máximo a partir del cual decido que la cámara no gire:
+        if (targetCameraAngle < maxRotationAngle)                                                           //Si mi ángulo no supera el máximo a partir del cual decido que la cámara no gire:
         {
-            pc_NewPos = transform.position; //Al estar en coordenadas del objeto, transform.position es el vector que une el objeto a seguir con la cámara
-            if (pc_NewPos.magnitude > pc_realDistance)  //Si el módulo de este vector es mayor que la distancia máxima de la cámara al personaje
+            newPosition = transform.position;                                                               //Al estar en coordenadas del objeto, transform.position es el vector que une el objeto a seguir con la cámara
+            if (newPosition.magnitude > distanceMagnitude)                                                  //Si el módulo de este vector es mayor que la distancia máxima de la cámara al personaje
             {
-                pc_NewPos = (pc_realDistance * pc_NewPos) / pc_NewPos.magnitude;//Lo reescalamos al máximo permitido
+                newPosition = (distanceMagnitude * newPosition) / newPosition.magnitude;                    //Lo reescalamos al máximo permitido
             }
-            transform.position = pc_NewPos;     //La posición será este vector reescalado que une ambos objetos
-            ChangeBase("toWorld");  //Vuelvo a coordenadas del mundo
-            transform.position = new Vector3(transform.position.x, pc_CameraHeight, transform.position.z);  //Asigno una constante altura
-            CheckObstacles(Obj);    //Compruebo si hay obstáculos entre la cámara y el objetivo
-            transform.LookAt(target);   //Hago que la cámara mire al objeto a seguir
+            transform.position = newPosition;                                                               //La posición será este vector reescalado que une ambos objetos
+            ChangeBase("toWorld");                                                                          //Vuelvo a coordenadas del mundo
+            transform.position = new Vector3(transform.position.x, cameraHeight, transform.position.z);     //Asigno una constante altura
+            CheckObstacles(Obj);                                                                            //Compruebo si hay obstáculos entre la cámara y el objetivo
+            transform.LookAt(target);                                                                       //Hago que la cámara mire al objeto a seguir
         }
         else
         {
-            pc_NewPos = transform.position; //Al estar en coordenadas del objeto, transform.position es el vector que une el objeto a seguir con la cámara
-            if (pc_NewPos.magnitude > pc_realDistance)  //Si el módulo de este vector es mayor que la distancia máxima de la cámara al personaje
+            newPosition = transform.position;                                                               //Al estar en coordenadas del objeto, transform.position es el vector que une el objeto a seguir con la cámara
+            if (newPosition.magnitude > distanceMagnitude)                                                  //Si el módulo de este vector es mayor que la distancia máxima de la cámara al personaje
             {
-                pc_NewPos = (pc_realDistance * pc_NewPos) / pc_NewPos.magnitude;//Lo reescalamos al máximo permitido
+                newPosition = (distanceMagnitude * newPosition) / newPosition.magnitude;                    //Lo reescalamos al máximo permitido
             }
-            transform.position = pc_NewPos;     //La posición será este vector reescalado que une ambos objetos
-            ChangeBase("toWorld"); //Vuelvo a coordenadas del mundo
-            pc_NewPos = transform.position + playerMovementScript.displacement;  //La nueva posición será la misma de antes más el desplazamiento que haya realizado el objeto a seguir en el último frame
-            transform.position = pc_NewPos; //Asigno esta nueva posición
-            transform.position = new Vector3(transform.position.x, pc_CameraHeight, transform.position.z);  //Asigno una constante altura
-            CheckObstacles(Obj);    //Compruebo si hay obstáculos entre la cámara y el objetivo
+            transform.position = newPosition;                                                               //La posición será este vector reescalado que une ambos objetos
+            ChangeBase("toWorld");                                                                          //Vuelvo a coordenadas del mundo
+            newPosition = transform.position + playerMovementScript.displacement;                           //La nueva posición será la misma de antes más el desplazamiento que haya realizado el objeto a seguir en el último frame
+            transform.position = newPosition;                                                               //Asigno esta nueva posición
+            transform.position = new Vector3(transform.position.x, cameraHeight, transform.position.z);     //Asigno una constante altura
+            CheckObstacles(Obj);                                                                            //Compruebo si hay obstáculos entre la cámara y el objetivo
         }
     }
-    void InputUpdateCamera(Transform Obj)              //Este método actualiza la posición de mi cámara respecto del objeto a seguir cuando la cámara es libre (controlada por el jugador)
+    void UpdateManualInputCamera(Transform Obj)                                                             //Este método actualiza la posición de mi cámara respecto del objeto a seguir cuando la cámara es libre (controlada por el jugador)
     {
-        Vector3 dir = new Vector3(0, 0, -MJ_targetDistance);
-        Quaternion MJ_rotation = Quaternion.Euler(MJ_inputY, MJ_inputX, 0);
-        transform.position = target.position + MJ_rotation * dir;
-        CheckObstacles(Obj);
-        transform.LookAt(target);
+        Vector3 dir = new Vector3(0, 0, -targetDistanceInputCamera);                                        //Este vector nos sirve para mover la camara lejos del jugador segun la distancia establecida
+        Quaternion rotation = Quaternion.Euler(yInput, xInput, 0);                                          // Guardamos la rotacion en un quaternion (Un quaternion tiene 4 variables, x y z determinan un vector y w determina cuanto giramos alrededor de ese vector) pero se lo pasamos en angulos de euler
+        transform.position = target.position + rotation * dir;                                              //Llevamos la camara al jugador, aplicamos la rotacion y alejamos la camara segun la direccion establecida (un quaternion se puede operar como si fuera un vector)
+        CheckObstacles(Obj);                                                                                //Comprobamos si algun objeto corta la linea de vision de la camara al jugador
+        transform.LookAt(target);                                                                           //Hacemos que la camara mire al jugador
     }
-    void CheckObstacles(Transform Obj)      //Este método comprueba si hay algún obstáculo entre la cámara y el objetivo, y además la recoloca.
+    void CheckObstacles(Transform Obj)                                                                      //Este método comprueba si hay algún obstáculo entre la cámara y el objetivo, y además la recoloca.
     {
         //Local vars
-        RaycastHit pc_hit;  //Variable que almacenará datos sobre la colisión del raycast
-        int pc_StaticSolid_mask = LayerMask.GetMask(StaticVariables.pc_StaticSolidLayer);   //Esta layer_mask será utilizada para que el raycast solo tenga en cuenta la layer StaticSolid
-        float distanceCamTarget = (Obj.position - transform.position).magnitude;
-        Vector3 newDistanceCamTarget;
+        RaycastHit pc_hit;                                                                                  //Variable que almacenará datos sobre la colisión del raycast
+        int pc_StaticSolid_mask = LayerMask.GetMask(StaticVariables.pc_StaticSolidLayer);                   //Esta layer_mask será utilizada para que el raycast solo tenga en cuenta la layer StaticSolid (mejor rendimiento que checkear cada objeto de la escena)
+        float distanceCamTarget = (Obj.position - transform.position).magnitude;                            //Calculamos la distancia entre la camara y el jugador
+        Vector3 newDistanceCamTarget;                                                                       //Guardamos la posicion acercada de la camara si se corta la linea de vision
 
         //Actions
-        if(Physics.Raycast(Obj.position,-transform.TransformDirection(Vector3.forward),out pc_hit, distanceCamTarget, pc_StaticSolid_mask))
-        {//Lanzo un rayo desde el objetivo a la cámara, que solo colisionará con la layer StaticSolid y que tendrá la misma longitud que la distancia entre objetivo y cámara
-            if (!pc_CameraMode) {
-                newDistanceCamTarget = (pc_hit.point - Obj.position) * cameraScaleFactor;
-                transform.position = Obj.position + newDistanceCamTarget;                              //La nueva posición de la cámara será el primer punto de intersección detectado entre el objetivo y la cámara con la layer StaticSolid
-                MJ_targetDistance = (transform.position - Obj.position).magnitude;
-            }
-            else
-            {
-                transform.position = pc_hit.point;
+        if (Physics.Raycast(Obj.position, -transform.TransformDirection(Vector3.forward), out pc_hit, distanceCamTarget, pc_StaticSolid_mask)) //Comprobamos la colision del rayo que va del jugador a la posicion de la camara
+        {
+            {//Lanzo un rayo desde el objetivo a la cámara, que solo colisionará con la layer StaticSolid y que tendrá la misma longitud que la distancia entre objetivo y cámara
+                if (!cameraMode)
+                {
+                    newDistanceCamTarget = (pc_hit.point - Obj.position) * cameraScaleFactor;               //Reescalamos el vector entre el punto de colision y el jugador para recolocar la camara
+                    transform.position = Obj.position + newDistanceCamTarget;                               //La nueva posición de la cámara será el primer punto de intersección detectado entre el objetivo y la cámara con la layer StaticSolid
+                    targetDistanceInputCamera = (transform.position - Obj.position).magnitude;              //Actualizamos la posicion de la camara en la variable que opera las rotaciones en el input manual
+                }
+                else
+                {
+                    transform.position = pc_hit.point;                                                      //Colocamos la camara en el punto de colision
+                }
+
             }
         }
-
+        else {
+            targetDistanceInputCamera = originalCameraTargetPosition;                                      // Si no ha habido colision la camara vuelve a su posicion original
+        }
 
 
         /*
@@ -155,28 +160,24 @@ public class PlayerCameraScript : MonoBehaviour {
          * Por ellos lanzamos el rayo del objetivo a la cámara y no al revés
          */
     }
-    void CheckCameraModeAndUpdate()
+    void CheckCameraModeAndUpdate()                                                                         //Permite cambiar entre modo de camara automatico y manual pulsando la tecla Y
     {
         if (Input.GetKeyDown("y"))
         {
-            pc_CameraMode = !pc_CameraMode;
+            cameraMode = !cameraMode;
         }
-        if (pc_CameraMode)
+        if (cameraMode)
         {
-            AutoUpdateCamera(target);
+            UpdateAutomaticCamera(target);
         }
         else
         {
-            InputUpdateCamera(target);
+            UpdateManualInputCamera(target);
         }
     }
 }
 
 /*To do
- * Arreglar las colisiones para que no haga tururr turrur
  * Arreglar el giro en el modo de cámara automátic@
- * Recalcular distancias cuando hay colisión
- * Arreglar el raycast para el caso de la cámara automática
- * Poner las variables en el inspector bonitas
- * Dejar el código bonito
+ * Hacer que el personaje se transparente cuando la camara se acerca mucho
  */

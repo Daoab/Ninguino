@@ -136,11 +136,15 @@ public class PlayerCameraScript : MonoBehaviour {
         //Actions
         if(Physics.Raycast(Obj.position,-transform.TransformDirection(Vector3.forward),out pc_hit, distanceCamTarget, pc_StaticSolid_mask))
         {//Lanzo un rayo desde el objetivo a la cámara, que solo colisionará con la layer StaticSolid y que tendrá la misma longitud que la distancia entre objetivo y cámara
-            print(pc_hit.distance + " " + pc_hit.collider.gameObject.name); //Hago print de la distancia y el nombre del objeto, esto solo sirve de ayuda en el desarrollo
-            newDistanceCamTarget = (pc_hit.point - Obj.position)* cameraScaleFactor;
-            transform.position = Obj.position + newDistanceCamTarget;                              //La nueva posición de la cámara será el primer punto de intersección detectado entre el objetivo y la cámara con la layer StaticSolid
-            MJ_targetDistance = (transform.position - Obj.position).magnitude;
-
+            if (!pc_CameraMode) {
+                newDistanceCamTarget = (pc_hit.point - Obj.position) * cameraScaleFactor;
+                transform.position = Obj.position + newDistanceCamTarget;                              //La nueva posición de la cámara será el primer punto de intersección detectado entre el objetivo y la cámara con la layer StaticSolid
+                MJ_targetDistance = (transform.position - Obj.position).magnitude;
+            }
+            else
+            {
+                transform.position = pc_hit.point;
+            }
         }
 
 

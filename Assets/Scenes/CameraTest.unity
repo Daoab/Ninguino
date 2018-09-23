@@ -211,7 +211,7 @@ MonoBehaviour:
   pc_mainObject: {fileID: 2024514521}
   ObjMove: {fileID: 2024514526}
   pc_distanceFromObjectInZ: 5
-  pc_CameraHeight: 0
+  pc_CameraHeight: 2
   pc_MaxAngle: 110
 --- !u!81 &805794044
 AudioListener:
@@ -284,7 +284,7 @@ GameObject:
   - component: {fileID: 2006451220}
   - component: {fileID: 2006451219}
   - component: {fileID: 2006451218}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Wall
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -352,7 +352,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 2006451217}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.5820227, y: 10.874885, z: -8.352549}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 6, z: 20}
   m_Children: []
   m_Father: {fileID: 0}

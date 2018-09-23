@@ -16,7 +16,7 @@ public class PlayerCameraScript : MonoBehaviour {
     private float pc_realDistance;              //Variable que guardará el el módulo de la distancia inicial
     public float pc_MaxAngle = 90f;             //Variable que indica el ángulo límite a partir del cual la cámara no gira
 
-    //public LayerMask StaticSolidLayer = -1;
+
 
     //FUNCIONES PRINCIPALES
     void Awake()
@@ -28,7 +28,6 @@ public class PlayerCameraScript : MonoBehaviour {
 
 	void LateUpdate () {
         UpdateCameraPos(pc_ObjFollowed);            //Actualizo la posición de la cámara
-        CheckObstacles(pc_ObjFollowed);
         pc_mainObject.transform.Rotate(90, 0, 0);   //Esto solo sirve para ayuda en el desarrollo, se puede quitar más adelante
     }
 
@@ -55,7 +54,7 @@ public class PlayerCameraScript : MonoBehaviour {
         else if (pc_direction.Equals("toObject"))   //en este modo llevamos a la cámara a coordenadas del objeto
             transform.position = pc_B.inverse.MultiplyPoint(transform.position);
     }
-    void UpdateCameraPos(Transform Obj)     //Este método actualiza la posición de mi cámara respecto del objeto a seguir
+    void UpdateCameraPos(Transform Obj)     //Este método actualiza la posición de mi cámara respecto del objeto a seguir cuando la cámara no es libre
     {
         //Base Change
         Base(pc_ObjFollowed);   //Calculo la matriz de cambio de base
@@ -73,9 +72,10 @@ public class PlayerCameraScript : MonoBehaviour {
             {
                 pc_NewPos = (pc_realDistance * pc_NewPos) / pc_NewPos.magnitude;//Lo reescalamos al máximo permitido
             }
-            transform.position = pc_NewPos; //La posición será este vector reescalado que une ambos objetos
+            transform.position = pc_NewPos;     //La posición será este vector reescalado que une ambos objetos
             ChangeBase("toWorld");  //Vuelvo a coordenadas del mundo
             transform.position = new Vector3(transform.position.x, pc_CameraHeight, transform.position.z);  //Asigno una constante altura
+            CheckObstacles(Obj);    //Compruebo si hay obstáculos entre la cámara y el objetivo
             transform.LookAt(pc_ObjFollowed);   //Hago que la cámara mire al objeto a seguir
         }
         else
@@ -84,20 +84,29 @@ public class PlayerCameraScript : MonoBehaviour {
             pc_NewPos = transform.position + ObjMove.Displacement;  //La nueva posición será la misma de antes más el desplazamiento que haya realizado el objeto a seguir en el último frame
             transform.position = pc_NewPos; //Asigno esta nueva posición
             transform.position = new Vector3(transform.position.x, pc_CameraHeight, transform.position.z);  //Asigno una constante altura
+            CheckObstacles(Obj);    //Compruebo si hay obstáculos entre la cámara y el objetivo
         }
+    }
+    void FreeUpdateCameraPos()              //Este método actualiza la posición de mi cámara respecto del objeto a seguir cuando la cámara es libre (controlada por el jugador)
+    {
+
     }
     void CheckObstacles(Transform Obj)      //Este método comprueba si hay algún obstáculo entre la cámara y el objetivo, y además la recoloca.
     {
-        RaycastHit hit;
-        int layer_mask = LayerMask.GetMask(StaticVariables.pc_StaticSolidLayer);
+        //Local vars
+        RaycastHit pc_hit;  //Variable que almacenará datos sobre la colisión del raycast
+        int pc_StaticSolid_mask = LayerMask.GetMask(StaticVariables.pc_StaticSolidLayer);   //Esta layer_mask será utilizada para que el raycast solo tenga en cuenta la layer StaticSolid
 
-        if(Physics.Raycast(Obj.position,-transform.TransformDirection(Vector3.forward),out hit, (Obj.position - transform.position).magnitude,layer_mask))
-        {
-            print(hit.distance + " " + hit.collider.gameObject.name);
+        //Actions
+        if(Physics.Raycast(Obj.position,-transform.TransformDirection(Vector3.forward),out pc_hit, (Obj.position - transform.position).magnitude, pc_StaticSolid_mask))
+        {//Lanzo un rayo desde el objetivo a la cámara, que solo colisionará con la layer StaticSolid y que tendrá la misma longitud que la distancia entre objetivo y cámara
+            print(pc_hit.distance + " " + pc_hit.collider.gameObject.name); //Hago print de la distancia y el nombre del objeto, esto solo sirve de ayuda en el desarrollo
+            transform.position = pc_hit.point;                              //La nueva posición de la cámara será el primer punto de intersección detectado entre el objetivo y la cámara con la layer StaticSolid
         }
         /*
          * Un problema de esto es que no detecta la colisión con un objeto si la cámara está dentro del mismo
          * Por lo cual, tiene más sentido hacer el raycast del objeto a la cámara
+         * Por ellos lanzamos el rayo del objetivo a la cámara y no al revés
          */
     }
 }

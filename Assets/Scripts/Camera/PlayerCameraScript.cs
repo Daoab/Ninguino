@@ -6,7 +6,7 @@ public class PlayerCameraScript : MonoBehaviour {
 
     [Header("General")]
 
-    [SerializeField] Transform target;                                                                      //Variable que apunta al objeto a seguir
+    [SerializeField] Transform target;                                                                      //Variable que apunta al objeto a seguir                                                  
     PlayerMovement playerMovementScript;                                                                    //Enlace al script de movimiento del jugador para poder acceder al desplazamiento
     [SerializeField] [Tooltip("Indica cuanto se acerca la camara al jugador al hacer colision de raycast en %")] float cameraScaleFactor = 90f;
     float originalCameraTargetPosition;                                                                     //Guardamos el valor original de la distancia jugador-camara en el caso de input para recolocarla al calcular la colision del raycast
@@ -174,6 +174,7 @@ public class PlayerCameraScript : MonoBehaviour {
         {
             UpdateManualInputCamera(target);
         }
+        
     }
 }
 

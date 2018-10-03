@@ -24,11 +24,11 @@ public class PlayerMovement : MonoBehaviour {
     }
 
     // Update is called once per frame
-    void FixedUpdate () {
+    void Update () {
         rb.velocity = Vector3.zero;                                                              //Eliminamos la velocidad que le quede al jugador cuando deje de dar input (evita movimiento resbaladizo)
-        rb.angularVelocity = Vector3.zero;                                                       //Eliminamos las rotaciones residuales por fisicas que no vengan del input del jugador
 
         displacement = transform.position;                                                       // Guardamos posicion de este frame
+
         xThrow = Input.GetAxis("Horizontal");                                                    //Asignamos el valor del eje x a su variable
         yThrow = Input.GetAxis("Vertical");                                                      //Asignamos el valor del eje y a su variable
 
@@ -50,7 +50,6 @@ public class PlayerMovement : MonoBehaviour {
 
 
         displacement = transform.position - displacement;                                        //Calculamos el desplazamiento del jugador entre frames
-        transform.LookAt(transform.position + movement);                                         //Hacemos que el jugador mire siempre a la dirección en la que avanza
-
+        transform.LookAt(transform.position + displacement);                                     //Hacemos que el jugador mire siempre a la dirección en la que avanza
 	}
 }

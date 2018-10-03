@@ -120,7 +120,7 @@ public class PlayerCameraScript : MonoBehaviour {
     {
         Vector3 dir = new Vector3(0, 0, -targetDistanceInputCamera);                                        //Este vector nos sirve para mover la camara lejos del jugador segun la distancia establecida
         Quaternion rotation = Quaternion.Euler(yInput, xInput, 0);                                          // Guardamos la rotacion en un quaternion (Un quaternion tiene 4 variables, x y z determinan un vector y w determina cuanto giramos alrededor de ese vector) pero se lo pasamos en angulos de euler
-        transform.position = target.position + rotation * dir;                                           //Llevamos la camara al jugador, aplicamos la rotacion y alejamos la camara segun la direccion establecida (un quaternion se puede operar como si fuera un vector)
+        transform.position = target.position + rotation * dir;                                              //Llevamos la camara al jugador, aplicamos la rotacion y alejamos la camara segun la direccion establecida (un quaternion se puede operar como si fuera un vector)
         CheckObstacles(Obj);                                                                                //Comprobamos si algun objeto corta la linea de vision de la camara al jugador
         transform.LookAt(target);                                                                           //Hacemos que la camara mire al jugador
     }

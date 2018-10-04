@@ -37,4 +37,18 @@ public class StaticFunctions : MonoBehaviour
         secondVector = Vector3.ProjectOnPlane(secondVector, normal).normalized;
         return Vector3.Angle(firstVector, secondVector);
     }
+    public static Vector3 CheckObstaclesAndBringCloser(Vector3 origin, Vector3 direction, float distance, int mask, float ResizeFactor, Vector3 ActualPosition,Vector3 defaultPos)
+    {
+        RaycastHit hit;
+        Vector3 objToHitVec;
+        if (Physics.Raycast(origin, direction, out hit, distance, mask))
+        {
+            objToHitVec = hit.point - origin;
+            objToHitVec -= objToHitVec.normalized * ResizeFactor;
+            ActualPosition = origin + objToHitVec;
+        }
+        else
+            ActualPosition = defaultPos;
+        return ActualPosition;
+    }
 }

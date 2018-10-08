@@ -29,6 +29,7 @@ public class PlayerMovement : MonoBehaviour
     {
         MovePlayer();
     }
+
     void MovePlayer()
     {
         xThrow = Input.GetAxis("Horizontal");                                                           //Asignamos el valor del eje x a su variable
@@ -43,5 +44,14 @@ public class PlayerMovement : MonoBehaviour
 
         if (movement.magnitude > 0.0f)
             transform.LookAt(transform.position + rb.velocity);                                    //Hacemos que el jugador mire siempre a la dirección en la que avanza
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.collider.CompareTag("Climbable"))
+        {
+            rb.useGravity = false;
+            transform.Translate(new Vector3(0, 5, 0));
+        }
     }
 }

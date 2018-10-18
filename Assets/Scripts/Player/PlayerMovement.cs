@@ -39,9 +39,7 @@ public class PlayerMovement : MonoBehaviour
 
         movement = (cameraRight * xThrow + cameraForward * yThrow) * movementSpeed;                     //Multiplicamos los vectores por el throw para ver la direccion de movimiento y por movementSpeed para ver su intensidad
 
-        rb.AddForce(-rb.velocity + movement, ForceMode.VelocityChange);                                   //Aplicamos el vector movement al RigidBody en modo VelocityChange(ingnora su masa y es menos resbaladizo)
-
-        if (movement.magnitude > 0.0f)
-            transform.LookAt(transform.position + rb.velocity);                                    //Hacemos que el jugador mire siempre a la dirección en la que avanza
+        rb.velocity = movement;
+        transform.LookAt(transform.position + movement);                                        //El jugador mira hacia donde avanza
     }
 }
